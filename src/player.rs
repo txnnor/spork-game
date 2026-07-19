@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{components::Player, constants::PLAYER_SPEED};
+use crate::{
+    components::{MainCamera, Player},
+    constants::PLAYER_SPEED,
+};
 
 pub fn spawn_player(
     mut commands: Commands,
@@ -18,20 +21,60 @@ pub fn spawn_player(
 pub fn player_movement(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Transform, With<Player>>,
+    mut player_query: Query<&mut Transform, With<Player>>,
+    camera_query: Query<&Transform, (With<MainCamera>, Without<Player>)>,
 ) {
-    for mut player in &mut query {
-        if keyboard.pressed(KeyCode::KeyW) {
-            player.translation.z += PLAYER_SPEED * time.delta_secs()
-        }
-        if keyboard.pressed(KeyCode::KeyS) {
-            player.translation.z -= PLAYER_SPEED * time.delta_secs()
-        }
-        if keyboard.pressed(KeyCode::KeyA) {
-            player.translation.x += PLAYER_SPEED * time.delta_secs()
-        }
-        if keyboard.pressed(KeyCode::KeyD) {
-            player.translation.x -= PLAYER_SPEED * time.delta_secs()
-        }
+    let mut player = player_query.single_mut().unwrap();
+    let camera = camera_query.single().unwrap();
+
+    let mut forward = *camera.forward();
+
+    forward.y = 0.0;
+    forward = forward.normalize();
+
+    let mut right = *camera.right();
+
+    right.y = 0.0;
+    right = right.normalize();
+
+    let mut movement = Vec3::ZERO;
+
+    if keyboard.pressed(KeyCode::KeyW) {
+        movement += forward;
     }
+
+    if keyboard.pressed(KeyCode::KeyS) {
+        movement -= forward;
+    }
+
+    if keyboard.pressed(KeyCode::KeyA) {
+        movement -= right;
+    }
+
+    if keyboard.pressed(KeyCode::KeyD) {
+        movement += right;
+    }
+
+    //-----------------------------------------------------
+    // NORMALIZE
+    //-----------------------------------------------------
+
+    // This prevents diagonal movement from being faster.
+    //
+    // Without this:
+    //
+    // W = speed 1
+    // D = speed 1
+    //
+    // W+D = speed 1.41
+    //
+    // normalize_or_zero() fixes that automatically.
+
+    movement = movement.normalize_or_zero();
+
+    //-----------------------------------------------------
+    // MOVE PLAYER
+    //-----------------------------------------------------
+
+    player.translation += movement * PLAYER_SPEED * time.delta_secs();
 }

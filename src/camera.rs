@@ -1,25 +1,54 @@
-use bevy::prelude::*;
+use bevy::{input::mouse::MouseMotion, prelude::*};
 
 use crate::{
-    components::{Camera, Player},
+    components::{CameraController, MainCamera, Player},
     constants::CAMERA_DISTANCE,
 };
 
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
-        Camera,
+        MainCamera,
+        CameraController {
+            yaw: 0.0,
+            pitch: -0.5,
+        },
         Camera3d::default(),
-        Transform::from_xyz(0.0, 10.0, -5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::default(),
     ));
+}
+
+pub fn mouse_look(
+    mut mouse_events: MessageReader<MouseMotion>,
+    mut camera_query: Query<&mut CameraController, With<MainCamera>>,
+) {
+    let mut controller = camera_query.single_mut().unwrap();
+
+    for event in mouse_events.read() {
+        controller.yaw -= event.delta.x * 0.003;
+        controller.pitch -= event.delta.y * 0.003;
+
+        controller.pitch = controller.pitch.clamp(-1.2, 1.2);
+    }
 }
 
 pub fn follow_player(
     player_query: Query<&Transform, With<Player>>,
-    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    mut camera_query: Query<
+        (&mut Transform, &CameraController),
+        (With<MainCamera>, Without<Player>),
+    >,
 ) {
     let player = player_query.single().unwrap();
-    let mut camera = camera_query.single_mut().unwrap();
 
-    camera.translation = player.translation + Vec3::new(0.0, CAMERA_DISTANCE, -5.0);
+    let (mut camera, controller) = camera_query.single_mut().unwrap();
+
+    let direction = Vec3::new(
+        controller.yaw.sin() * controller.pitch.cos(),
+        controller.pitch.sin(),
+        controller.yaw.cos() * controller.pitch.cos(),
+    );
+
+    camera.translation = player.translation - direction * CAMERA_DISTANCE;
+
     camera.look_at(player.translation, Vec3::Y);
 }
