@@ -55,26 +55,7 @@ pub fn player_movement(
         movement += right;
     }
 
-    //-----------------------------------------------------
-    // NORMALIZE
-    //-----------------------------------------------------
-
-    // This prevents diagonal movement from being faster.
-    //
-    // Without this:
-    //
-    // W = speed 1
-    // D = speed 1
-    //
-    // W+D = speed 1.41
-    //
-    // normalize_or_zero() fixes that automatically.
-
     movement = movement.normalize_or_zero();
-
-    //-----------------------------------------------------
-    // MOVE PLAYER
-    //-----------------------------------------------------
 
     player.translation += movement * PLAYER_SPEED * time.delta_secs();
 }

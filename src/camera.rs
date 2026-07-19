@@ -49,6 +49,5 @@ pub fn follow_player(
     );
 
     camera.translation = player.translation - direction * CAMERA_DISTANCE;
-
     camera.look_at(player.translation, Vec3::Y);
 }
